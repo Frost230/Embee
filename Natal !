@@ -5,107 +5,216 @@ local Debris = game:GetService("Debris")
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
-local char = player.Character or player.CharacterAdded:Wait()
-local humanoid = char:WaitForChild("Humanoid")
-local hrp = char:WaitForChild("HumanoidRootPart")
 
-local startPosition = Vector3.new(123.27, 4.09, -320.79)
-local reachDistance = 1.3
-
-local cameraRadius = 10
-local cameraHeight = 5
-local cameraSpeed = 1.2
-
-local path = {
-	{pos = Vector3.new(123.27, 4.09, -320.79), speed = 16},
-	{pos = Vector3.new(126.00, 4.09, -319.20), speed = 16},
-	{pos = Vector3.new(129.40, 4.09, -317.60), speed = 16},
-	{pos = Vector3.new(132.80, 4.09, -315.90), speed = 24},
-	{pos = Vector3.new(136.10, 4.09, -314.30), speed = 24},
-	{pos = Vector3.new(139.50, 4.09, -312.80), speed = 16},
+local CONFIG = {
+	startPosition = Vector3.new(123.27, 4.09, -320.79),
+	reachDistance = 1.3,
+	cameraRadius = 10,
+	cameraHeight = 5,
+	cameraSpeed = 1.2,
+	teleportDelay = 0.05,
+	pathLoopDelay = 0.1,
+	maxRetries = 3
 }
 
-local running = false
-local originCFrame
-local cameraConn
-local camAngle = 0
-local oldCamType
-local oldCamSubject
+local function generateCirclePath(center, radius, points, height, speed)
+	local circlePath = {}
+	for i = 0, points - 1 do
+		local angle = (i / points) * math.pi * 2
+		local x = center.X + math.cos(angle) * radius
+		local z = center.Z + math.sin(angle) * radius
+		table.insert(circlePath, {
+			pos = Vector3.new(x, height, z),
+			speed = speed
+		})
+	end
+	return circlePath
+end
+
+local circleCenter = Vector3.new(131.5, 4.09, -316.5)
+local circleRadius = 8
+local circlePoints = 20
+local walkSpeed = 18
+
+local path = generateCirclePath(circleCenter, circleRadius, circlePoints, 4.09, walkSpeed)
+
+local state = {
+	running = false,
+	originCFrame = nil,
+	cameraConn = nil,
+	camAngle = 0,
+	oldCamType = nil,
+	oldCamSubject = nil,
+	walkThread = nil,
+	char = nil,
+	humanoid = nil,
+	hrp = nil
+}
+
+local function getCharacterSafely()
+	local char = player.Character
+	if not char then return nil end
+	
+	local humanoid = char:FindFirstChildOfClass("Humanoid")
+	local hrp = char:FindFirstChild("HumanoidRootPart")
+	
+	if humanoid and hrp and humanoid.Health > 0 then
+		return char, humanoid, hrp
+	end
+	return nil
+end
+
+local function updateCharacter()
+	state.char, state.humanoid, state.hrp = getCharacterSafely()
+	return state.char ~= nil
+end
 
 local function teleport(cf)
-	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-	task.wait(0.05)
-	hrp.CFrame = cf
-	task.wait(0.05)
-	humanoid:ChangeState(Enum.HumanoidStateType.Running)
+	if not updateCharacter() then return false end
+	
+	local success = pcall(function()
+		state.humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+		task.wait(CONFIG.teleportDelay)
+		state.hrp.CFrame = cf
+		task.wait(CONFIG.teleportDelay)
+		state.humanoid:ChangeState(Enum.HumanoidStateType.Running)
+	end)
+	
+	return success
 end
 
 local function walkReal(targetPos, speed)
-	humanoid.WalkSpeed = speed or 16
-	while running and (hrp.Position - targetPos).Magnitude > reachDistance do
-		local dir = targetPos - hrp.Position
-		dir = Vector3.new(dir.X, 0, dir.Z)
-		if dir.Magnitude > 0 then
-			humanoid:Move(dir.Unit, true)
+	if not updateCharacter() then return false end
+	
+	state.humanoid.WalkSpeed = speed or 16
+	local timeout = 0
+	local maxTimeout = 300
+	
+	while state.running and timeout < maxTimeout do
+		if not updateCharacter() then return false end
+		
+		local distance = (state.hrp.Position - targetPos).Magnitude
+		if distance <= CONFIG.reachDistance then
+			break
 		end
+		
+		local dir = targetPos - state.hrp.Position
+		dir = Vector3.new(dir.X, 0, dir.Z)
+		
+		if dir.Magnitude > 0 then
+			state.humanoid:Move(dir.Unit, true)
+		end
+		
+		timeout += 1
 		RunService.RenderStepped:Wait()
 	end
-	humanoid:Move(Vector3.zero, true)
+	
+	if state.humanoid then
+		state.humanoid:Move(Vector3.zero, true)
+	end
+	
+	return true
 end
 
 local function startCamera()
-	oldCamType = camera.CameraType
-	oldCamSubject = camera.CameraSubject
+	if state.cameraConn then return end
+	
+	state.oldCamType = camera.CameraType
+	state.oldCamSubject = camera.CameraSubject
 	camera.CameraType = Enum.CameraType.Scriptable
-	camAngle = 0
-	cameraConn = RunService.RenderStepped:Connect(function(dt)
-		if not running then return end
-		camAngle += dt * cameraSpeed
+	state.camAngle = 0
+	
+	state.cameraConn = RunService.RenderStepped:Connect(function(dt)
+		if not state.running or not state.hrp then return end
+		
+		state.camAngle += dt * CONFIG.cameraSpeed
 		local offset = Vector3.new(
-			math.cos(camAngle) * cameraRadius,
-			cameraHeight,
-			math.sin(camAngle) * cameraRadius
+			math.cos(state.camAngle) * CONFIG.cameraRadius,
+			CONFIG.cameraHeight,
+			math.sin(state.camAngle) * CONFIG.cameraRadius
 		)
-		camera.CFrame = CFrame.new(hrp.Position + offset, hrp.Position)
+		
+		pcall(function()
+			camera.CFrame = CFrame.new(state.hrp.Position + offset, state.hrp.Position)
+		end)
 	end)
 end
 
 local function stopCamera()
-	if cameraConn then
-		cameraConn:Disconnect()
-		cameraConn = nil
+	if state.cameraConn then
+		state.cameraConn:Disconnect()
+		state.cameraConn = nil
 	end
-	camera.CameraType = oldCamType or Enum.CameraType.Custom
-	camera.CameraSubject = oldCamSubject or humanoid
+	
+	pcall(function()
+		camera.CameraType = state.oldCamType or Enum.CameraType.Custom
+		camera.CameraSubject = state.oldCamSubject or state.humanoid
+	end)
+end
+
+local function cancelAll()
+	state.running = false
+	
+	if state.humanoid then
+		pcall(function()
+			state.humanoid:Move(Vector3.zero, true)
+		end)
+	end
+	
+	stopCamera()
+	
+	if state.walkThread then
+		task.cancel(state.walkThread)
+		state.walkThread = nil
+	end
 end
 
 local function startReplay()
-	if running then return end
-	running = true
-	originCFrame = hrp.CFrame
-	teleport(CFrame.new(startPosition))
+	if state.running then return end
+	if not updateCharacter() then
+		warn("Personagem não está pronto!")
+		return
+	end
+	
+	state.running = true
+	state.originCFrame = state.hrp.CFrame
+	
+	if not teleport(CFrame.new(CONFIG.startPosition)) then
+		warn("Falha ao teleportar!")
+		cancelAll()
+		return
+	end
+	
 	startCamera()
-
-	task.spawn(function()
-		while running do
+	
+	state.walkThread = task.spawn(function()
+		while state.running do
 			for _, step in ipairs(path) do
-				if not running then break end
-				walkReal(step.pos, step.speed)
+				if not state.running then break end
+				if not walkReal(step.pos, step.speed) then
+					warn("Falha no movimento!")
+					break
+				end
 			end
-			task.wait(0.1)
+			
+			if state.running then
+				task.wait(CONFIG.pathLoopDelay)
+			end
 		end
+		
 		stopCamera()
 	end)
 end
 
 local function stopReplay()
-	if not running then return end
-	running = false
-	humanoid:Move(Vector3.zero, true)
-	stopCamera()
-	if originCFrame then
+	if not state.running then return end
+	
+	local savedOrigin = state.originCFrame
+	cancelAll()
+	
+	if savedOrigin and updateCharacter() then
 		task.wait(0.1)
-		teleport(originCFrame)
+		teleport(savedOrigin)
 	end
 end
 
@@ -114,84 +223,235 @@ pcall(function()
 	if old then old:Destroy() end
 end)
 
-local gui = Instance.new("ScreenGui", player.PlayerGui)
+local gui = Instance.new("ScreenGui")
 gui.Name = "ReplayGui"
 gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = player.PlayerGui
 
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,260,0,170)
-frame.Position = UDim2.new(0.02,0,0.4,0)
-frame.BackgroundColor3 = Color3.fromRGB(120,25,25)
+local shadow = Instance.new("ImageLabel")
+shadow.Size = UDim2.new(0, 280, 0, 190)
+shadow.Position = UDim2.new(0.02, -10, 0.4, -10)
+shadow.BackgroundTransparency = 1
+shadow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+shadow.ImageColor3 = Color3.new(0, 0, 0)
+shadow.ImageTransparency = 0.7
+shadow.ScaleType = Enum.ScaleType.Slice
+shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+shadow.Parent = gui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 280, 0, 200)
+frame.Position = UDim2.new(0.02, 0, 0.4, 0)
+frame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 frame.Active = true
 frame.Draggable = true
 frame.BorderSizePixel = 0
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0,16)
+frame.Parent = gui
 
-local gradient = Instance.new("UIGradient", frame)
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 20)
+corner.Parent = frame
+
+local gradient = Instance.new("UIGradient")
 gradient.Color = ColorSequence.new{
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(170,30,30)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(20,120,60))
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(220, 50, 50)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 30, 80)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 150, 80))
 }
 gradient.Rotation = 45
+gradient.Parent = frame
 
 task.spawn(function()
-	while frame.Parent do
-		gradient.Rotation += 1
-		task.wait(0.05)
+	while gui.Parent do
+		gradient.Rotation = (gradient.Rotation + 0.5) % 360
+		task.wait(0.03)
 	end
 end)
 
-local stroke = Instance.new("UIStroke", frame)
-stroke.Thickness = 2
-stroke.Color = Color3.new(1,1,1)
-stroke.Transparency = 0.4
+local overlay = Instance.new("Frame")
+overlay.Size = UDim2.new(1, 0, 1, 0)
+overlay.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+overlay.BackgroundTransparency = 0.3
+overlay.BorderSizePixel = 0
+overlay.Parent = frame
 
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,40)
-title.Position = UDim2.new(0,0,0,8)
+local overlayCorner = Instance.new("UICorner")
+overlayCorner.CornerRadius = UDim.new(0, 20)
+overlayCorner.Parent = overlay
+
+local stroke = Instance.new("UIStroke")
+stroke.Thickness = 3
+stroke.Color = Color3.new(1, 1, 1)
+stroke.Transparency = 0.2
+stroke.Parent = frame
+
+local innerStroke = Instance.new("UIStroke")
+innerStroke.Thickness = 1
+innerStroke.Color = Color3.fromRGB(255, 200, 200)
+innerStroke.Transparency = 0.6
+innerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+innerStroke.Parent = overlay
+
+local titleBg = Instance.new("Frame")
+titleBg.Size = UDim2.new(1, 0, 0, 50)
+titleBg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+titleBg.BackgroundTransparency = 0.4
+titleBg.BorderSizePixel = 0
+titleBg.Parent = frame
+
+local titleBgCorner = Instance.new("UICorner")
+titleBgCorner.CornerRadius = UDim.new(0, 20)
+titleBgCorner.Parent = titleBg
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 50)
 title.BackgroundTransparency = 1
-title.Text = "🎄 Evento de Natal ! ❄️"
+title.Text = "🎄 EVENTO DE NATAL ❄️"
 title.Font = Enum.Font.GothamBold
-title.TextSize = 18
-title.TextColor3 = Color3.new(1,1,1)
+title.TextSize = 20
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextStrokeTransparency = 0.5
+title.TextStrokeColor3 = Color3.new(0, 0, 0)
+title.Parent = frame
 
-local function createButton(text, posY, color)
-	local btn = Instance.new("TextButton", frame)
-	btn.Size = UDim2.new(0.88,0,0,38)
-	btn.Position = UDim2.new(0.06,0,posY,0)
-	btn.Text = text
-	btn.Font = Enum.Font.GothamBold
-	btn.TextSize = 15
-	btn.TextColor3 = Color3.new(1,1,1)
-	btn.BackgroundColor3 = color
+local subtitle = Instance.new("TextLabel")
+subtitle.Size = UDim2.new(1, 0, 0, 20)
+subtitle.Position = UDim2.new(0, 0, 0, 55)
+subtitle.BackgroundTransparency = 1
+subtitle.Text = "Sistema de Auto Farm"
+subtitle.Font = Enum.Font.Gotham
+subtitle.TextSize = 12
+subtitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+subtitle.TextTransparency = 0.3
+subtitle.Parent = frame
+
+local divider = Instance.new("Frame")
+divider.Size = UDim2.new(0.9, 0, 0, 2)
+divider.Position = UDim2.new(0.05, 0, 0, 80)
+divider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+divider.BackgroundTransparency = 0.7
+divider.BorderSizePixel = 0
+divider.Parent = frame
+
+local dividerGradient = Instance.new("UIGradient")
+dividerGradient.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(150, 200, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+}
+dividerGradient.Parent = divider
+
+local function createButton(text, posY, color1, color2, icon)
+	local btnFrame = Instance.new("Frame")
+	btnFrame.Size = UDim2.new(0.88, 0, 0, 45)
+	btnFrame.Position = UDim2.new(0.06, 0, posY, 0)
+	btnFrame.BackgroundTransparency = 1
+	btnFrame.Parent = frame
+	
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, 0, 1, 0)
+	btn.Text = ""
+	btn.BackgroundColor3 = color1
 	btn.AutoButtonColor = false
 	btn.BorderSizePixel = 0
-	Instance.new("UICorner", btn).CornerRadius = UDim.new(0,12)
+	btn.Parent = btnFrame
+	
+	local btnCorner = Instance.new("UICorner")
+	btnCorner.CornerRadius = UDim.new(0, 14)
+	btnCorner.Parent = btn
+	
+	local btnGradient = Instance.new("UIGradient")
+	btnGradient.Color = ColorSequence.new{
+		ColorSequenceKeypoint.new(0, color1),
+		ColorSequenceKeypoint.new(1, color2)
+	}
+	btnGradient.Rotation = 90
+	btnGradient.Parent = btn
+	
+	local btnStroke = Instance.new("UIStroke")
+	btnStroke.Thickness = 2
+	btnStroke.Color = Color3.new(1, 1, 1)
+	btnStroke.Transparency = 0.5
+	btnStroke.Parent = btn
+	
+	local btnLabel = Instance.new("TextLabel")
+	btnLabel.Size = UDim2.new(1, 0, 1, 0)
+	btnLabel.BackgroundTransparency = 1
+	btnLabel.Text = text
+	btnLabel.Font = Enum.Font.GothamBold
+	btnLabel.TextSize = 16
+	btnLabel.TextColor3 = Color3.new(1, 1, 1)
+	btnLabel.TextStrokeTransparency = 0.7
+	btnLabel.Parent = btn
+	
+	local shine = Instance.new("Frame")
+	shine.Size = UDim2.new(1, 0, 0.5, 0)
+	shine.BackgroundColor3 = Color3.new(1, 1, 1)
+	shine.BackgroundTransparency = 0.85
+	shine.BorderSizePixel = 0
+	shine.Parent = btn
+	
+	local shineCorner = Instance.new("UICorner")
+	shineCorner.CornerRadius = UDim.new(0, 14)
+	shineCorner.Parent = shine
+	
+	btn.MouseEnter:Connect(function()
+		TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundTransparency = 0.2}):Play()
+		TweenService:Create(btnStroke, TweenInfo.new(0.2), {Transparency = 0.2}):Play()
+		TweenService:Create(btnLabel, TweenInfo.new(0.2), {TextSize = 17}):Play()
+	end)
+	
+	btn.MouseLeave:Connect(function()
+		TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
+		TweenService:Create(btnStroke, TweenInfo.new(0.2), {Transparency = 0.5}):Play()
+		TweenService:Create(btnLabel, TweenInfo.new(0.2), {TextSize = 16}):Play()
+	end)
+	
 	return btn
 end
 
-local startBtn = createButton("🎁 INICIAR", 0.38, Color3.fromRGB(40,170,90))
-local stopBtn  = createButton("🛑 PARAR",   0.65, Color3.fromRGB(200,60,60))
+local startBtn = createButton("🎁 INICIAR FARM", 0.46, Color3.fromRGB(30, 180, 100), Color3.fromRGB(20, 140, 80))
+local stopBtn = createButton("🛑 PARAR FARM", 0.72, Color3.fromRGB(220, 50, 60), Color3.fromRGB(180, 30, 40))
 
-startBtn.MouseButton1Click:Connect(startReplay)
-stopBtn.MouseButton1Click:Connect(stopReplay)
+startBtn.MouseButton1Click:Connect(function()
+	pcall(startReplay)
+end)
+
+stopBtn.MouseButton1Click:Connect(function()
+	pcall(stopReplay)
+end)
 
 task.spawn(function()
-	while frame.Parent do
-		local snow = Instance.new("TextLabel", frame)
+	while gui.Parent do
+		local snow = Instance.new("TextLabel")
 		snow.Text = "❄"
 		snow.BackgroundTransparency = 1
-		snow.TextColor3 = Color3.new(1,1,1)
-		snow.TextSize = math.random(12,20)
-		snow.Position = UDim2.new(math.random(),0,-0.1,0)
-		snow.Size = UDim2.new(0,24,0,24)
-
-		TweenService:Create(snow, TweenInfo.new(math.random(3,5)), {
-			Position = UDim2.new(snow.Position.X.Scale,0,1.2,0),
+		snow.TextColor3 = Color3.new(1, 1, 1)
+		snow.TextSize = math.random(12, 20)
+		snow.Position = UDim2.new(math.random(), 0, -0.1, 0)
+		snow.Size = UDim2.new(0, 24, 0, 24)
+		snow.Parent = frame
+		
+		local tween = TweenService:Create(snow, TweenInfo.new(math.random(3, 5)), {
+			Position = UDim2.new(snow.Position.X.Scale, 0, 1.2, 0),
 			TextTransparency = 1
-		}):Play()
-
-		Debris:AddItem(snow,5)
+		})
+		tween:Play()
+		
+		Debris:AddItem(snow, 5)
 		task.wait(0.25)
 	end
 end)
+
+player.CharacterAdded:Connect(function()
+	task.wait(1)
+	if state.running then
+		cancelAll()
+	end
+	updateCharacter()
+end)
+
+updateCharacter()
+
+print("✅ Sistema de Replay de Natal carregado com sucesso!")
