@@ -1,5 +1,6 @@
 -- Brookhaven Noclip TOTAL - Você e a bola atravessam TODOS os jogadores
 -- Vocês são fantasmas para outros players
+-- Frost230_0
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
