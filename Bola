@@ -1,0 +1,338 @@
+-- Brookhaven Noclip TOTAL - Você e a bola atravessam TODOS os jogadores
+-- Vocês são fantasmas para outros players
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local PhysicsService = game:GetService("PhysicsService")
+local player = Players.LocalPlayer
+
+print("👻 Iniciando Modo Fantasma + Anti-Pulo + Speed...")
+
+--// SET WALK SPEED 25.7
+local function setSpeed(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    humanoid.WalkSpeed = 25.7
+    print("⚡ Speed definido: 25.7")
+end
+
+--// ANTI PULO - BROOKHAVEN
+local function applyAntiJump(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    humanoid.JumpPower = 0
+    humanoid.UseJumpPower = true
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+    
+    -- Força no chão sempre
+    RunService.Stepped:Connect(function()
+        if humanoid and humanoid.Parent then
+            humanoid.JumpPower = 0
+            humanoid:ChangeState(Enum.HumanoidStateType.Running)
+        end
+    end)
+    
+    print("🚫 Anti-Pulo ativado!")
+end
+
+-- Aplica Speed quando spawnar
+if player.Character then
+    setSpeed(player.Character)
+end
+player.CharacterAdded:Connect(setSpeed)
+
+-- Aplica Anti-Pulo quando spawnar
+if player.Character then
+    applyAntiJump(player.Character)
+end
+player.CharacterAdded:Connect(applyAntiJump)
+
+-- Cria grupos de colisão
+pcall(function()
+    PhysicsService:RegisterCollisionGroup("Bolas")
+    PhysicsService:RegisterCollisionGroup("LocalPlayer")
+    PhysicsService:RegisterCollisionGroup("OutrosJogadores")
+end)
+
+-- CONFIGURAÇÃO: Nem você nem bola colidem com outros jogadores
+PhysicsService:CollisionGroupSetCollidable("Bolas", "OutrosJogadores", false)
+PhysicsService:CollisionGroupSetCollidable("LocalPlayer", "OutrosJogadores", false)
+
+-- Mas você e a bola colidem com tudo mais (chão, paredes, objetos)
+PhysicsService:CollisionGroupSetCollidable("Bolas", "Default", true)
+PhysicsService:CollisionGroupSetCollidable("LocalPlayer", "Default", true)
+
+-- Bola e você podem colidir entre si
+PhysicsService:CollisionGroupSetCollidable("Bolas", "LocalPlayer", true)
+
+print("✅ Modo Fantasma configurado!")
+
+-- Cache
+local bolasAtivas = {}
+local jogadoresProcessados = {}
+
+-- Identifica bolas
+local function ehBola(obj)
+    if not obj then return false end
+    local nome = obj.Name:lower()
+    return nome:match("ball") or nome:match("bola") or 
+           nome:match("basketball") or nome:match("soccer") or
+           nome:match("football") or nome:match("tennis") or
+           nome:match("volleyball") or nome:match("basebol")
+end
+
+-- Configura bola COM FORÇA
+local function configurarBola(parte)
+    if not parte or not parte:IsA("BasePart") then return end
+    
+    parte.CollisionGroup = "Bolas"
+    bolasAtivas[parte] = true
+    
+    -- Monitor AGRESSIVO para a bola
+    spawn(function()
+        while parte and parte.Parent do
+            parte.CollisionGroup = "Bolas"
+            task.wait(0.05) -- Muito mais rápido
+        end
+    end)
+    
+    -- Segundo monitor de backup
+    parte:GetPropertyChangedSignal("CollisionGroup"):Connect(function()
+        if parte.CollisionGroup ~= "Bolas" then
+            parte.CollisionGroup = "Bolas"
+        end
+    end)
+end
+
+-- Configura SEU character como fantasma
+local function configurarLocalPlayer(char)
+    if not char then return end
+    
+    spawn(function()
+        task.wait(0.1)
+        
+        for _, desc in pairs(char:GetDescendants()) do
+            if desc:IsA("BasePart") then
+                desc.CollisionGroup = "LocalPlayer"
+            end
+        end
+        
+        char.DescendantAdded:Connect(function(desc)
+            if desc:IsA("BasePart") then
+                desc.CollisionGroup = "LocalPlayer"
+            end
+        end)
+        
+        -- Mantém você como fantasma
+        spawn(function()
+            while char and char.Parent do
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CollisionGroup ~= "LocalPlayer" then
+                        part.CollisionGroup = "LocalPlayer"
+                    end
+                end
+                task.wait(0.5)
+            end
+        end)
+        
+        print("👻 Você agora é um fantasma!")
+    end)
+end
+
+-- Configura outros jogadores
+local function configurarOutroJogador(char)
+    if not char or jogadoresProcessados[char] then return end
+    
+    spawn(function()
+        task.wait(0.1)
+        
+        for _, desc in pairs(char:GetDescendants()) do
+            if desc:IsA("BasePart") then
+                desc.CollisionGroup = "OutrosJogadores"
+            end
+        end
+        
+        char.DescendantAdded:Connect(function(desc)
+            if desc:IsA("BasePart") then
+                desc.CollisionGroup = "OutrosJogadores"
+            end
+        end)
+        
+        -- Mantém outros jogadores no grupo correto
+        spawn(function()
+            while char and char.Parent do
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CollisionGroup ~= "OutrosJogadores" then
+                        part.CollisionGroup = "OutrosJogadores"
+                    end
+                end
+                task.wait(1)
+            end
+        end)
+    end)
+    
+    jogadoresProcessados[char] = true
+end
+
+-- Configura VOCÊ como fantasma
+if player.Character then
+    configurarLocalPlayer(player.Character)
+end
+
+player.CharacterAdded:Connect(function(char)
+    task.wait(0.1)
+    configurarLocalPlayer(char)
+end)
+
+-- Configura TODOS os outros jogadores
+print("👥 Configurando outros jogadores...")
+for _, p in pairs(Players:GetPlayers()) do
+    if p ~= player then -- Não configura você
+        if p.Character then
+            configurarOutroJogador(p.Character)
+        end
+        p.CharacterAdded:Connect(function(char)
+            task.wait(0.1)
+            configurarOutroJogador(char)
+        end)
+    end
+end
+
+Players.PlayerAdded:Connect(function(p)
+    if p ~= player then
+        p.CharacterAdded:Connect(function(char)
+            task.wait(0.1)
+            configurarOutroJogador(char)
+        end)
+    end
+end)
+
+-- Processa bolas existentes
+print("🏀 Procurando bolas...")
+for _, obj in pairs(workspace:GetDescendants()) do
+    if ehBola(obj) then
+        configurarBola(obj)
+        for _, child in pairs(obj:GetDescendants()) do
+            if child:IsA("BasePart") then
+                configurarBola(child)
+            end
+        end
+        print("✅ Bola encontrada: " .. obj.Name)
+    end
+end
+
+-- Monitor do inventário
+local function monitorarInventario(char)
+    char.ChildAdded:Connect(function(tool)
+        if tool:IsA("Tool") and ehBola(tool) then
+            task.wait(0.05)
+            for _, part in pairs(tool:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    configurarBola(part)
+                end
+            end
+            print("✅ Bola equipada: " .. tool.Name)
+        end
+    end)
+end
+
+if player.Character then
+    monitorarInventario(player.Character)
+end
+
+player.CharacterAdded:Connect(function(char)
+    task.wait(0.1)
+    monitorarInventario(char)
+end)
+
+-- Monitor de novas bolas
+workspace.DescendantAdded:Connect(function(obj)
+    if ehBola(obj) then
+        task.wait(0.05)
+        configurarBola(obj)
+        for _, child in pairs(obj:GetDescendants()) do
+            if child:IsA("BasePart") then
+                configurarBola(child)
+            end
+        end
+    end
+end)
+
+-- Loop principal
+local frame = 0
+local connection = RunService.Heartbeat:Connect(function()
+    frame = frame + 1
+    
+    -- Mantém bolas no grupo correto COM FORÇA
+    if frame % 5 == 0 then -- Mudou de 10 para 5 (mais rápido)
+        for bola, _ in pairs(bolasAtivas) do
+            if bola and bola.Parent then
+                bola.CollisionGroup = "Bolas" -- Força sempre
+            else
+                bolasAtivas[bola] = nil
+            end
+        end
+        
+        -- Procura novas bolas
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if ehBola(obj) and not bolasAtivas[obj] then
+                configurarBola(obj)
+            end
+        end
+    end
+    
+    -- Mantém VOCÊ como fantasma
+    if frame % 20 == 0 and player.Character then
+        for _, part in pairs(player.Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CollisionGroup ~= "LocalPlayer" then
+                part.CollisionGroup = "LocalPlayer"
+            end
+        end
+    end
+    
+    -- Mantém outros jogadores no grupo correto
+    if frame % 45 == 0 then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= player and p.Character then
+                for _, part in pairs(p.Character:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CollisionGroup ~= "OutrosJogadores" then
+                        part.CollisionGroup = "OutrosJogadores"
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- Loop de segurança COM FOCO NA BOLA
+spawn(function()
+    while task.wait(0.5) do -- Mudou de 2 para 0.5 (mais rápido)
+        pcall(function()
+            PhysicsService:CollisionGroupSetCollidable("Bolas", "OutrosJogadores", false)
+            PhysicsService:CollisionGroupSetCollidable("LocalPlayer", "OutrosJogadores", false)
+            PhysicsService:CollisionGroupSetCollidable("Bolas", "Default", true)
+            PhysicsService:CollisionGroupSetCollidable("LocalPlayer", "Default", true)
+        end)
+        
+        -- FORÇA EXTRA: Força todas as bolas a cada 0.5s
+        for bola, _ in pairs(bolasAtivas) do
+            if bola and bola.Parent then
+                bola.CollisionGroup = "Bolas"
+            end
+        end
+    end
+end)
+
+_G.BrookhavenNoclipConnection = connection
+
+print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+print("👻 MODO FANTASMA ATIVADO!")
+print("🚫 ANTI-PULO ATIVADO!")
+print("⚡ SPEED FIXO: 25.7")
+print("🏀 Bola atravessa TODOS os jogadores")
+print("🚶 VOCÊ atravessa TODOS os jogadores")
+print("🧱 Vocês colidem com chão e paredes")
+print("⚽ Você e a bola colidem entre si")
+print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+print("")
+print("Para desativar:")
+print("_G.BrookhavenNoclipConnection:Disconnect()")
+print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
