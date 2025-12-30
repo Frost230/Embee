@@ -19,10 +19,10 @@ local redzlib = {
 				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(220, 20, 60))
 			}),
 			["Color Hub 2"] = Color3.fromRGB(0, 0, 0),
-			["Color Stroke"] = Color3.fromRGB(180, 30, 50),
-			["Color Theme"] = Color3.fromRGB(255, 255, 255),
-			["Color Text"] = Color3.fromRGB(255, 255, 255),
-			["Color Dark Text"] = Color3.fromRGB(255, 255, 255)
+			["Color Stroke"] = Color3.fromRGB(220, 20, 60),
+			["Color Theme"] = Color3.fromRGB(220, 20, 60),
+			["Color Text"] = Color3.fromRGB(220, 20, 60),
+			["Color Dark Text"] = Color3.fromRGB(0, 0, 0)
 		},
 		Dark = {
 			["Color Hub 1"] = ColorSequence.new({
@@ -31,10 +31,10 @@ local redzlib = {
 				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(220, 20, 60))
 			}),
 			["Color Hub 2"] = Color3.fromRGB(0, 0, 0),
-			["Color Stroke"] = Color3.fromRGB(180, 30, 50),
-			["Color Theme"] = Color3.fromRGB(255, 255, 255),
-			["Color Text"] = Color3.fromRGB(255, 255, 255),
-			["Color Dark Text"] = Color3.fromRGB(255, 255, 255)
+			["Color Stroke"] = Color3.fromRGB(220, 20, 60),
+			["Color Theme"] = Color3.fromRGB(220, 20, 60),
+			["Color Text"] = Color3.fromRGB(220, 20, 60),
+			["Color Dark Text"] = Color3.fromRGB(0, 0, 0)
 		},
 		Blue = {
 			["Color Hub 1"] = ColorSequence.new({
@@ -43,13 +43,14 @@ local redzlib = {
 				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(220, 20, 60))
 			}),
 			["Color Hub 2"] = Color3.fromRGB(0, 0, 0),
-			["Color Stroke"] = Color3.fromRGB(180, 30, 50),
-			["Color Theme"] = Color3.fromRGB(255, 255, 255),
-			["Color Text"] = Color3.fromRGB(255, 255, 255),
-			["Color Dark Text"] = Color3.fromRGB(255, 255, 255),
-			["Color Dark Blue"] = Color3.fromRGB(255, 255, 255),
+			["Color Stroke"] = Color3.fromRGB(220, 20, 60),
+			["Color Theme"] = Color3.fromRGB(220, 20, 60),
+			["Color Text"] = Color3.fromRGB(220, 20, 60),
+			["Color Dark Text"] = Color3.fromRGB(0, 0, 0),
+			["Color Dark Blue"] = Color3.fromRGB(220, 20, 60),
 			["Color Hub 9"] = Color3.fromRGB(0, 0, 0),
-			["Color Dark Cyan"] = Color3.fromRGB(255, 255, 255)
+			["Color Dark Cyan"] = Color3.fromRGB(220, 20, 60)
+		
 }
 	},
 	Info = {
