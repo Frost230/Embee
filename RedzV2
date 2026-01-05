@@ -1689,8 +1689,8 @@ function redzlib:MakeWindow(Configs)
 	local Window, FirstTab = {}, false
 	function Window:CloseBtn()
 		local Dialog = Window:Dialog({
-			Title = "fechar Hub",
-			Text = "você quer fechar este hub?",
+			Title = "fechar o Embee",
+			Text = "você quer fechar este Embee Hub, ele pode esta executando função necessarias, fecha ele agora pode prejudicar seu jogo !",
 			Options = {
 				{"Yes", function()
 					ScreenGui:Destroy()
