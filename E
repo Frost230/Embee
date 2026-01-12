@@ -10,45 +10,52 @@ local PlayerMouse = Player:GetMouse()
 
 local redzlib = {
 	Themes = {
-		Darker = {
-			["Color Hub 1"] = ColorSequence.new({
-				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(110, 0, 0)),
-				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(170, 15, 15)),
-				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(110, 0, 0))
-			}),
-			["Color Hub 2"] = Color3.fromRGB(130, 5, 5),
-			["Color Stroke"] = Color3.fromRGB(190, 25, 25),
-			["Color Theme"] = Color3.fromRGB(255, 0, 0),
-			["Color Text"] = Color3.fromRGB(245, 230, 230),
-			["Color Dark Text"] = Color3.fromRGB(180, 120, 120)
-		},
-		Dark = {
-			["Color Hub 1"] = ColorSequence.new({
-				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(120, 0, 0)),
-				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(190, 20, 20)),
-				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(120, 0, 0))
-			}),
-			["Color Hub 2"] = Color3.fromRGB(150, 10, 10),
-			
-			["Color Stroke"] = Color3.fromRGB(210, 35, 35),
-			["Color Theme"] = Color3.fromRGB(255, 30, 30),
-			["Color Text"] = Color3.fromRGB(255, 30, 30),
-			["Color Dark Text"] = Color3.fromRGB(190, 130, 130)
-		},
-		Purple = {
-			["Color Hub 1"] = ColorSequence.new({
-				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(180, 90, 30)),  -- Marrom escuro
-				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 180, 80)), -- Laranja dourado
-				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(180, 90, 30))
-			}),
-			["Color Hub 2"] = Color3.fromRGB(140, 70, 25),          -- Marrom terra
-			["Color Stroke"] = Color3.fromRGB(255, 200, 100),       -- Dourado claro
-			["Color Theme"] = Color3.fromRGB(255, 165, 60),         -- Laranja vibrante
-			["Color Text"] = Color3.fromRGB(255, 245, 220),         -- Bege claro
-			["Color Dark Text"] = Color3.fromRGB(200, 150, 100),    -- Bege escuro
-			["Color Accent"] = Color3.fromRGB(0, 180, 216),         -- Azul tropical (água)
-			["Color Secondary"] = Color3.fromRGB(255, 140, 180),    -- Rosa hibisco
-			["Color Background"] = Color3.fromRGB(245, 222, 179)
+		Red = {
+    ["Color Hub 1"] = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(180, 90, 30)),
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 180, 80)),
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(180, 90, 30))
+    }),
+    ["Color Hub 2"] = Color3.fromRGB(140, 70, 25),
+    ["Color Stroke"] = Color3.fromRGB(255, 200, 100),
+    ["Color Theme"] = Color3.fromRGB(255, 165, 60),
+    ["Color Text"] = Color3.fromRGB(255, 245, 220),
+    ["Color Dark Text"] = Color3.fromRGB(200, 150, 100),
+    ["Color Accent"] = Color3.fromRGB(0, 180, 216),
+    ["Color Secondary"] = Color3.fromRGB(255, 140, 180),
+    ["Color Background"] = Color3.fromRGB(245, 222, 179)
+},
+
+Dark = {
+    ["Color Hub 1"] = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(120, 60, 20)),
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(200, 140, 60)),
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(120, 60, 20))
+    }),
+    ["Color Hub 2"] = Color3.fromRGB(100, 50, 15),
+    ["Color Stroke"] = Color3.fromRGB(220, 170, 80),
+    ["Color Theme"] = Color3.fromRGB(230, 145, 50),
+    ["Color Text"] = Color3.fromRGB(240, 230, 200),
+    ["Color Dark Text"] = Color3.fromRGB(180, 130, 90),
+    ["Color Accent"] = Color3.fromRGB(0, 150, 190),
+    ["Color Secondary"] = Color3.fromRGB(230, 120, 160),
+    ["Color Background"] = Color3.fromRGB(210, 190, 150)
+},
+
+Purple = {
+    ["Color Hub 1"] = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(180, 90, 30)),
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 180, 80)),
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(180, 90, 30))
+    }),
+    ["Color Hub 2"] = Color3.fromRGB(140, 70, 25),
+    ["Color Stroke"] = Color3.fromRGB(255, 200, 100),
+    ["Color Theme"] = Color3.fromRGB(255, 165, 60),
+    ["Color Text"] = Color3.fromRGB(255, 245, 220),
+    ["Color Dark Text"] = Color3.fromRGB(200, 150, 100),
+    ["Color Accent"] = Color3.fromRGB(0, 180, 216),
+    ["Color Secondary"] = Color3.fromRGB(255, 140, 180),
+    ["Color Background"] = Color3.fromRGB(245, 222, 179)
 		}
 	},
 	Info = {
