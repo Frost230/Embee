@@ -1557,7 +1557,7 @@ function redzlib:MakeWindow(Configs)
 	function Window:CloseBtn()
 		local Dialog = Window:Dialog({
 			Title = "Close",
-			Text = "Você Realmente quer fechar A Tubers Client Isso pode interromper Opções Mas pode reexecutar novamente 🫂",
+			Text = "Você Realmente quer fechar CO0LKID HUB Isso pode interromper Opções Mas pode reexecutar novamente 🫂 abraço do Soares :3",
 			Options = {
 				{"Confirm", function()
 					ScreenGui:Destroy()
