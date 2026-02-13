@@ -1,0 +1,7 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+ReplicatedStorage.RE["1Clea1rTool1s"]:FireServer("RequestingPropName", "NomeDoProp", "Categoria")
+
+ReplicatedStorage.RE["1Clea1rTool1s"]:FireServer("RequestingPropName", "TrafficCones", "001")
+
+ReplicatedStorage.RE["1Clea1rTool1s"]:FireServer("RequestingPropName", "FurnitureBleachers", "Furniture")
