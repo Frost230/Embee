@@ -1,0 +1,39 @@
+-- By Frost // Embee Hub
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local player = game.Players.LocalPlayer
+
+ReplicatedStorage.RE["1Clea1rTool1s"]:FireServer("RequestingPropName", "NomeDoProp", "Categoria")
+
+ReplicatedStorage.RE["1Clea1rTool1s"]:FireServer("RequestingPropName", "TrafficCones", "001")
+
+ReplicatedStorage.RE["1Clea1rTool1s"]:FireServer("RequestingPropName", "FurnitureBleachers", "Furniture")
+
+task.wait(0.1)
+
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+local behindPosition = humanoidRootPart.Position - (humanoidRootPart.CFrame.LookVector * 3)
+
+local rayOrigin = Vector3.new(behindPosition.X, 426, behindPosition.Z)
+local rayDirection = Vector3.new(0, -500, 0)
+
+local raycastParams = RaycastParams.new()
+raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+raycastParams.FilterDescendantsInstances = {character}
+
+local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+
+if raycastResult then
+    local groundPosition = raycastResult.Position
+    
+    local camera = workspace.CurrentCamera
+    local screenPoint, onScreen = camera:WorldToScreenPoint(groundPosition)
+    
+    if onScreen then
+        VirtualInputManager:SendMouseButtonEvent(screenPoint.X, screenPoint.Y, 0, true, game, 0)
+        task.wait(0.05)
+        VirtualInputManager:SendMouseButtonEvent(screenPoint.X, screenPoint.Y, 0, false, game, 0)
+    end
+end
